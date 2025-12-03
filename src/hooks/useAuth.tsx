@@ -9,7 +9,6 @@ interface AuthContextType {
   userType: UserType | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
-  signUp: (email: string, password: string, userType: UserType) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
 }
 
@@ -49,35 +48,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: null };
   };
 
-  const signUp = async (email: string, password: string, userType: UserType) => {
-    const redirectUrl = `${window.location.origin}/`;
-    
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: redirectUrl,
-        data: {
-          user_type: userType,
-        },
-      },
-    });
-    
-    if (error) {
-      if (error.message.includes('already registered')) {
-        return { error: 'This email is already registered. Please sign in instead.' };
-      }
-      return { error: error.message };
-    }
-    return { error: null };
-  };
-
   const signOut = async () => {
     await supabase.auth.signOut();
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, userType, loading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ user, session, userType, loading, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   );
