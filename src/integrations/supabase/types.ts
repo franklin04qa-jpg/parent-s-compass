@@ -180,7 +180,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      create_parent_account: {
+        Args: { parent_email: string; parent_password: string }
+        Returns: Json
+      }
     }
     Enums: {
       emotion_type:

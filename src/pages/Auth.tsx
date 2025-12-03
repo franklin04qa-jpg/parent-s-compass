@@ -6,10 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { LoadingSpinner, LoadingScreen } from '@/components/shared/LoadingSpinner';
-import { UserType } from '@/types/database';
 import { toast } from 'sonner';
-import { Heart, Sparkles } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Heart } from 'lucide-react';
 import { z } from 'zod';
 
 const authSchema = z.object({
@@ -18,11 +16,9 @@ const authSchema = z.object({
 });
 
 export default function Auth() {
-  const { user, userType, loading: authLoading, signIn, signUp } = useAuth();
+  const { user, userType, loading: authLoading, signIn } = useAuth();
   const { hasProfile, isLoading: profileLoading } = useProfile();
   
-  const [activeTab, setActiveTab] = useState<UserType>('parent');
-  const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -68,29 +64,20 @@ export default function Auth() {
 
     setSubmitting(true);
 
-    let result;
-    if (isSignUp) {
-      result = await signUp(email, password, activeTab);
-      if (!result.error) {
-        toast.success('Account created! Please check your email to confirm.');
-      }
-    } else {
-      result = await signIn(email, password);
-      if (!result.error) {
-        toast.success('Welcome back!');
-      }
-    }
-
-    setSubmitting(false);
+    const result = await signIn(email, password);
 
     if (result.error) {
       toast.error(result.error);
+      setSubmitting(false);
+      return;
     }
+
+    toast.success('Welcome back!');
+    setSubmitting(false);
   };
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Header */}
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-12">
         {/* Logo */}
         <div className="mb-8 text-center animate-fade-in">
@@ -99,34 +86,6 @@ export default function Auth() {
           </div>
           <h1 className="text-3xl font-bold text-foreground">Little Moments</h1>
           <p className="text-muted-foreground mt-2">Your parenting companion</p>
-        </div>
-
-        {/* Tab Toggle */}
-        <div className="w-full max-w-sm bg-secondary rounded-xl p-1 flex mb-6 animate-slide-up">
-          <button
-            onClick={() => setActiveTab('parent')}
-            className={cn(
-              'flex-1 py-3 rounded-lg font-semibold transition-all flex items-center justify-center gap-2',
-              activeTab === 'parent'
-                ? 'bg-card shadow-soft text-foreground'
-                : 'text-muted-foreground'
-            )}
-          >
-            <Heart className="w-4 h-4" />
-            Parent
-          </button>
-          <button
-            onClick={() => setActiveTab('creator')}
-            className={cn(
-              'flex-1 py-3 rounded-lg font-semibold transition-all flex items-center justify-center gap-2',
-              activeTab === 'creator'
-                ? 'bg-card shadow-soft text-foreground'
-                : 'text-muted-foreground'
-            )}
-          >
-            <Sparkles className="w-4 h-4" />
-            Creator
-          </button>
         </div>
 
         {/* Form */}
@@ -170,30 +129,15 @@ export default function Auth() {
           >
             {submitting ? (
               <LoadingSpinner size="sm" className="text-primary-foreground" />
-            ) : isSignUp ? (
-              `Create ${activeTab === 'parent' ? 'Parent' : 'Creator'} Account`
             ) : (
               'Sign In'
             )}
           </Button>
-
-          <p className="text-center text-sm text-muted-foreground">
-            {isSignUp ? 'Already have an account?' : "Don't have an account?"}{' '}
-            <button
-              type="button"
-              onClick={() => setIsSignUp(!isSignUp)}
-              className="text-primary font-semibold hover:underline"
-            >
-              {isSignUp ? 'Sign in' : 'Sign up'}
-            </button>
-          </p>
         </form>
 
         {/* Info */}
         <p className="mt-8 text-xs text-muted-foreground text-center max-w-xs">
-          {activeTab === 'parent'
-            ? 'Track your parenting journey, get personalized strategies, and celebrate every moment.'
-            : 'Share your expertise and help parents navigate their journey with actionable strategies.'}
+          Track your parenting journey with personalized strategies and celebrate every moment.
         </p>
       </div>
     </div>

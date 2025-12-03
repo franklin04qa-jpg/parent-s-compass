@@ -20,6 +20,7 @@ import Profile from "./pages/parent/Profile";
 import CreatorDashboard from "./pages/creator/Dashboard";
 import CreatorStrategies from "./pages/creator/Strategies";
 import StrategyForm from "./pages/creator/StrategyForm";
+import Families from "./pages/creator/Families";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -53,6 +54,7 @@ const App = () => (
               <Route path="/creator/strategies" element={<CreatorStrategies />} />
               <Route path="/creator/strategy/new" element={<StrategyForm />} />
               <Route path="/creator/strategy/edit/:id" element={<StrategyForm />} />
+              <Route path="/creator/families" element={<Families />} />
             </Route>
 
             {/* Catch all */}
