@@ -1,7 +1,7 @@
 import { Outlet, Navigate, NavLink } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { LoadingScreen } from '@/components/shared/LoadingSpinner';
-import { LayoutDashboard, FileText, LogOut } from 'lucide-react';
+import { LayoutDashboard, FileText, Users, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -50,6 +50,20 @@ export function CreatorLayout() {
           >
             <LayoutDashboard className="w-4 h-4" />
             Dashboard
+          </NavLink>
+          <NavLink
+            to="/creator/families"
+            className={({ isActive }) =>
+              cn(
+                'flex items-center gap-2 px-4 py-3 border-b-2 font-medium transition-colors',
+                isActive
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              )
+            }
+          >
+            <Users className="w-4 h-4" />
+            Families
           </NavLink>
           <NavLink
             to="/creator/strategies"
