@@ -1,19 +1,27 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { LoadingSpinner } from '@/components/shared/LoadingSpinner';
 import { toast } from 'sonner';
-import { Plus, Users, Copy, Check, Calendar } from 'lucide-react';
+import { Plus, Users, Copy, Check, Calendar, Clock, CheckCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { Profile } from '@/types/database';
+import { formatAge } from '@/lib/age';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
 
 export default function Families() {
-  const { session } = useAuth();
   const [email, setEmail] = useState('');
   const [parentName, setParentName] = useState('');
   const [loading, setLoading] = useState(false);
@@ -34,6 +42,15 @@ export default function Families() {
     },
   });
 
+  const generatePassword = () => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%';
+    let password = '';
+    for (let i = 0; i < 12; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return password;
+  };
+
   const createAccount = async () => {
     if (!email) {
       toast.error('Email is required');
@@ -44,29 +61,41 @@ export default function Families() {
     setResult(null);
 
     try {
-      const { data, error } = await supabase.functions.invoke('create-parent-account', {
-        body: { email, parentName },
+      const tempPassword = generatePassword();
+
+      const { data, error } = await supabase.auth.signUp({
+        email: email,
+        password: tempPassword,
+        options: {
+          data: {
+            user_type: 'parent',
+            first_login: true,
+            parent_name: parentName || ''
+          },
+          emailRedirectTo: window.location.origin + '/'
+        }
       });
 
       if (error) {
         throw error;
       }
 
-      if (data.error) {
-        throw new Error(data.error);
+      if (!data.user) {
+        throw new Error('Failed to create user');
       }
 
       setResult({
-        email: data.email,
-        password: data.password,
+        email: email,
+        password: tempPassword,
       });
 
       toast.success('Parent account created successfully!');
       setEmail('');
       setParentName('');
       refetch();
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to create account');
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create account';
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -79,6 +108,17 @@ export default function Families() {
       toast.success('Credentials copied to clipboard');
       setTimeout(() => setCopied(false), 2000);
     }
+  };
+
+  const getChildAge = (birthdate: string) => {
+    return formatAge(birthdate);
+  };
+
+  const getFamilyStatus = (family: Profile) => {
+    if (family.child_name) {
+      return { label: 'Active', variant: 'default' as const };
+    }
+    return { label: 'Pending Onboarding', variant: 'secondary' as const };
   };
 
   return (
@@ -150,12 +190,12 @@ export default function Families() {
         <Card className="border-sage bg-sage/5">
           <CardHeader>
             <CardTitle className="text-sage flex items-center gap-2">
-              <Check className="w-5 h-5" />
+              <CheckCircle className="w-5 h-5" />
               Account Created Successfully!
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="bg-card rounded-lg p-4 font-mono text-sm space-y-2">
+            <div className="bg-card rounded-lg p-4 font-mono text-sm space-y-2 border">
               <div className="flex items-center gap-2">
                 <span className="text-muted-foreground">Email:</span>
                 <span className="font-semibold">{result.email}</span>
@@ -185,7 +225,7 @@ export default function Families() {
               </Button>
             </div>
             <p className="text-sm text-muted-foreground">
-              Send these credentials to the parent. They'll complete their profile on first login.
+              Send these credentials to the parent. They'll need to change their password on first login.
             </p>
           </CardContent>
         </Card>
@@ -199,7 +239,7 @@ export default function Families() {
             Existing Families
           </CardTitle>
           <CardDescription>
-            Parents who have completed their profile setup
+            Parents who have registered accounts
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -208,23 +248,58 @@ export default function Families() {
               <LoadingSpinner />
             </div>
           ) : families && families.length > 0 ? (
-            <div className="divide-y divide-border">
-              {families.map((family) => (
-                <div key={family.id} className="py-4 flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-foreground">{family.parent_name}</p>
-                    <p className="text-sm text-muted-foreground">
-                      Child: {family.child_name}
-                    </p>
-                  </div>
-                  <div className="text-right text-sm text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <Calendar className="w-3 h-3" />
-                      {format(new Date(family.created_at), 'MMM d, yyyy')}
-                    </div>
-                  </div>
-                </div>
-              ))}
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Parent Name</TableHead>
+                    <TableHead>Child Name</TableHead>
+                    <TableHead>Child Age</TableHead>
+                    <TableHead>Created</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {families.map((family) => {
+                    const status = getFamilyStatus(family);
+                    return (
+                      <TableRow key={family.id}>
+                        <TableCell className="font-medium">
+                          {family.parent_name || '—'}
+                        </TableCell>
+                        <TableCell>
+                          {family.child_name || (
+                            <span className="text-muted-foreground italic">Not completed</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {family.child_birthdate ? (
+                            getChildAge(family.child_birthdate)
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1 text-muted-foreground">
+                            <Calendar className="w-3 h-3" />
+                            {format(new Date(family.created_at), 'MMM d, yyyy')}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={status.variant}>
+                            {status.label === 'Active' ? (
+                              <CheckCircle className="w-3 h-3 mr-1" />
+                            ) : (
+                              <Clock className="w-3 h-3 mr-1" />
+                            )}
+                            {status.label}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
             </div>
           ) : (
             <div className="text-center py-8">
