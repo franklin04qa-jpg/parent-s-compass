@@ -64,16 +64,22 @@ export default function Auth() {
 
     setSubmitting(true);
 
-    const result = await signIn(email, password);
+    try {
+      const result = await signIn(email, password);
 
-    if (result.error) {
-      toast.error(result.error);
+      if (result.error) {
+        toast.error(result.error);
+        setSubmitting(false);
+        return;
+      }
+
+      toast.success('Welcome back!');
+    } catch (error) {
+      console.error('Login error:', error);
+      toast.error('An unexpected error occurred. Please try again.');
+    } finally {
       setSubmitting(false);
-      return;
     }
-
-    toast.success('Welcome back!');
-    setSubmitting(false);
   };
 
   return (
